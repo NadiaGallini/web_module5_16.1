@@ -1,47 +1,59 @@
 <template>
   <div id="app">
-    <img alt="Vue logo" src="./assets/logo.png">
-    <HelloWorld :msg="messageFromServer"/>
+    <h1>WebSocket Chat</h1>
+    <div v-if="connected">
+      <input v-model="messageInput" placeholder="Enter message" @keyup.enter="sendMessage">
+      <button @click="sendMessage">Send</button>
+    </div>
+    <div v-else>
+      <p>Connecting...</p>
+    </div>
+    <ul>
+      <li v-for="(msg, index) in messages" :key="index">{{ msg }}</li>
+    </ul>
   </div>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue';
 import io from 'socket.io-client';
 
 export default {
   name: 'App',
-  components: {
-    HelloWorld
-  },
   data() {
     return {
       socket: null,
-      messageFromServer: ''
+      connected: false,
+      messageInput: '',
+      messages: []
     };
   },
-  mounted() {
-    // Подключение к серверу
-    this.socket = io('http://localhost:3000'); // Замените на адрес вашего сервера
+  created() {
+    this.socket = io('http://localhost:3000'); // Замените на адрес вашего сервера, если он отличается
 
-    // Подписка на событие подключения
     this.socket.on('connect', () => {
       console.log('Connected to server');
-      this.messageFromServer = 'Connected to server';
+      this.connected = true;
     });
 
-    // Подписка на событие отключения
+    this.socket.on('message', (data) => {
+      console.log('Message received:', data);
+      this.messages.push(data);
+    });
+
     this.socket.on('disconnect', () => {
       console.log('Disconnected from server');
-      this.messageFromServer = 'Disconnected from server';
-    });
-
-    // Пример обработчика события от сервера
-    this.socket.on('messageFromServer', (message) => {
-      console.log('Message from server:', message);
-      this.messageFromServer = message;
+      this.connected = false;
     });
   },
+  methods: {
+    sendMessage() {
+      if (this.messageInput.trim() !== '') {
+        this.socket.emit('message', this.messageInput);
+        this.messages.push('You: ' + this.messageInput);
+        this.messageInput = '';
+      }
+    }
+  }
 };
 </script>
 
